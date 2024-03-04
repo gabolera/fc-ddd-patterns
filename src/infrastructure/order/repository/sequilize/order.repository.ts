@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import Order from "../../../../domain/checkout/entity/order";
 import OrderItem from "../../../../domain/checkout/entity/order_item";
 import OrderRepositoryInterface from "../../../../domain/checkout/repository/order-repository.interface";
@@ -26,16 +27,25 @@ export default class OrderRepository implements OrderRepositoryInterface {
   }
 
   async update(entity: Order): Promise<void> {
-    await OrderModel.update(
-      {
-        customer_id: entity.customerId,
-        total: entity.total()
+    // Remove all items that are not in the entity
+    OrderItemModel.destroy({
+      where: {
+        order_id: entity.id,
+        id: { [Op.notIn]: entity.items.map((item) => item.id) },
       },
-      { where: { id: entity.id }}
-    );
+    });
+
+    // Search for saved items
+    const savedItems = await OrderItemModel.findAll({
+      where: {
+        order_id: entity.id,
+        id: { [Op.in]: entity.items.map((item) => item.id) },
+      },
+    });
 
     // Update items
-    entity.items.forEach(async (item) => {
+    const forUpdateItems = entity.items.filter((item) => savedItems.find((i) => i.id === item.id));
+    forUpdateItems.forEach(async (item) => {
       await OrderItemModel.update(
         {
           name: item.name,
@@ -43,9 +53,31 @@ export default class OrderRepository implements OrderRepositoryInterface {
           product_id: item.productId,
           quantity: item.quantity,
         },
-        { where: { id: item.id }}
+        { where: { id: item.id } }
       );
-    })
+    });
+
+    // Create new items
+    const newItemsNotSaved = entity.items.filter((item) => !savedItems.find((i) => i.id === item.id));
+    for (const item of newItemsNotSaved) {
+      await OrderItemModel.create({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        product_id: item.productId,
+        quantity: item.quantity,
+        order_id: entity.id,
+      });
+    }
+
+    // Update total of the order
+    await OrderModel.update(
+      {
+        customer_id: entity.customerId,
+        total: entity.total(),
+      },
+      { where: { id: entity.id } }
+    );
   }
 
   async find(id: string): Promise<Order> {
@@ -58,7 +90,13 @@ export default class OrderRepository implements OrderRepositoryInterface {
       orderModel.id,
       orderModel.customer_id,
       orderModel.items.map((item: any) => {
-        return new OrderItem(item.id, item.name, item.price, item.product_id, item.quantity);
+        return new OrderItem(
+          item.id,
+          item.name,
+          item.price,
+          item.product_id,
+          item.quantity
+        );
       })
     );
   }
@@ -73,7 +111,13 @@ export default class OrderRepository implements OrderRepositoryInterface {
         orderModel.id,
         orderModel.customer_id,
         orderModel.items.map((item: any) => {
-          return new OrderItem(item.id, item.name, item.price, item.product_id, item.quantity);
+          return new OrderItem(
+            item.id,
+            item.name,
+            item.price,
+            item.product_id,
+            item.quantity
+          );
         })
       );
     });
