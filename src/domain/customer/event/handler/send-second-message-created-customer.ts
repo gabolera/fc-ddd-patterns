@@ -1,10 +1,10 @@
 import EventHandlerInterface from "../../../@shared/event/event-handler.interface";
-import EventInterface from "../../../@shared/event/event.interface";
+import CustomerCreatedEvent from "../custumer-created.event";
 
 export default class SendSecondMessageCreateCustumerHandler
-  implements EventHandlerInterface
+  implements EventHandlerInterface<CustomerCreatedEvent>
 {
-  handle(event: EventInterface): void {
+  handle(event: CustomerCreatedEvent): void {
     console.log("Esse é o segundo console.log do evento: CustomerCreated");
   }
 }

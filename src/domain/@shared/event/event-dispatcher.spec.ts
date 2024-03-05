@@ -1,7 +1,10 @@
+import CustomerChangeAddressEvent from "../../customer/event/custumer-change-address.event";
 import CustomerCreatedEvent from "../../customer/event/custumer-created.event";
+import SendMessageOnChageAddressHandler from "../../customer/event/handler/send-message-change-address";
 import SendMessageCreateCustumerHandler from "../../customer/event/handler/send-message-created-customer";
 import SendSecondMessageCreateCustumerHandler from "../../customer/event/handler/send-second-message-created-customer";
 import CustomerFactory from "../../customer/factory/customer.factory";
+import Address from "../../customer/value-object/address";
 import SendEmailWhenProductIsCreatedHandler from "../../product/event/handler/send-email-when-product-is-created.handler";
 import ProductCreatedEvent from "../../product/event/product-created.event";
 import EventDispatcher from "./event-dispatcher";
@@ -106,5 +109,24 @@ describe("Domain events tests", () => {
 
     expect(spyEventHandler).toHaveBeenCalled();
     expect(spyEventHandlerTwo).toHaveBeenCalled();
+  });
+
+  it("should notify send message event on changeAddress", () => {
+    const eventDispatcher = new EventDispatcher();
+    const eventHandler = new SendMessageOnChageAddressHandler();
+    const spyEventHandler = jest.spyOn(eventHandler, "handle");
+    eventDispatcher.register("CustomerChangeAddressEvent", eventHandler);
+
+    const customer = CustomerFactory.createWithAddress(
+      "Gabriel",
+      new Address("Rua Bahia", 1, "123456-000", "Blublu")
+    );
+
+    customer.changeAddress(new Address("Rua Doze", 1, "123456-000", "Blublu"));
+
+    const event = new CustomerChangeAddressEvent(customer);
+    eventDispatcher.notify(event);
+
+    expect(spyEventHandler).toHaveBeenCalled();
   });
 });
