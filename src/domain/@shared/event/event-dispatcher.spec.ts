@@ -1,3 +1,5 @@
+import CustomerCreatedEvent from "../../customer/event/custumer-created.event";
+import SendMessageCreateCustumerHandler from "../../customer/event/handler/send-message-created-customer";
 import SendEmailWhenProductIsCreatedHandler from "../../product/event/handler/send-email-when-product-is-created.handler";
 import ProductCreatedEvent from "../../product/event/product-created.event";
 import EventDispatcher from "./event-dispatcher";
@@ -76,6 +78,24 @@ describe("Domain events tests", () => {
 
     // Quando o notify for executado o SendEmailWhenProductIsCreatedHandler.handle() deve ser chamado
     eventDispatcher.notify(productCreatedEvent);
+
+    expect(spyEventHandler).toHaveBeenCalled();
+  });
+
+  it("should notify send message event on create custumer", () => {
+    const eventDispatcher = new EventDispatcher();
+    const eventHandler = new SendMessageCreateCustumerHandler();
+    const spyEventHandler = jest.spyOn(eventHandler, "handle");
+
+    eventDispatcher.register("CustomerCreatedEvent", eventHandler);
+
+    expect(
+      eventDispatcher.getEventHandlers["CustomerCreatedEvent"][0]
+    ).toMatchObject(eventHandler);
+
+    const customer = new CustomerCreatedEvent({ teste: "test" });
+
+    eventDispatcher.notify(customer);
 
     expect(spyEventHandler).toHaveBeenCalled();
   });
